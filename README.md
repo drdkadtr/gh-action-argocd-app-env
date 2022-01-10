@@ -1,6 +1,6 @@
 # gh-action-argocd-app-env
 
-GitOps repo with ArgoCD
+GitOps repo with ArgoCD and GitHub Actions self-hosted runner (minikube)
 
 #### Commands
 
@@ -11,11 +11,10 @@ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/st
 
 # access ArgoCD UI
 kubectl get svc -n argocd
-kubectl port-forward svc/argocd-server 8080:443 -n argocd
+killall kubectl || kubectl port-forward svc/argocd-server 8080:443 -n argocd &
 
 # login with admin user and below token (as in documentation):
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 --decode && echo
-
 ```
 </br>
 
