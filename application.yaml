@@ -7,7 +7,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitlab.com/drdkadtr/gh-action-argocd-app-env.git
+    repoURL: https://github.com/drdkadtr/gh-action-argocd-app-env.git
     targetRevision: HEAD
     path: e2e
   destination:

@@ -1,29 +1,24 @@
+# https://github.com/drdkadtr/gh-action-argocd-app-env/settings/actions/runners
 name: self-hosted
 
-# Controls when the workflow will run
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # https://github.com/actions/runner
   my-self-hosted-run:
-
     runs-on: self-hosted
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-
-      - run: echo "::set-env name=DAY_OF_WEEK::$( date +%a )"
 
       - name: Setup infra
         if: github.event_name == 'workflow_dispatch'
         run: |
           ./infra/setup.sh
 
-      - name: Setup argocd
+      - name: Setup argocd and patch it
         if: github.event_name == 'workflow_dispatch'
         run: |
           ./infra/argo.sh
@@ -32,3 +27,12 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           kubectl apply -f application.yaml
+
+      - name: Port forward argcd UI
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          killall kubectl || kubectl port-forward svc/argocd-server 8080:443 -n argocd &
+
+      - name: Print arcd url
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "http://localhost:8080"
