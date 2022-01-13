@@ -7,32 +7,34 @@ on:
 
 jobs:
   # https://github.com/actions/runner
-  my-self-hosted-run:
+  self-hosted-run:
     runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v2
 
       - name: Setup infra
-        if: github.event_name == 'workflow_dispatch'
         run: |
-          ./infra/setup.sh
+          .github/self-hosted/setup.sh
 
       - name: Setup argocd and patch it
-        if: github.event_name == 'workflow_dispatch'
         run: |
-          ./infra/argo.sh
-
-      - name: Setup argcd application
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          kubectl apply -f application.yaml
+          .github/self-hosted/argo.sh
 
       - name: Port forward argcd UI
-        if: github.event_name == 'workflow_dispatch'
         run: |
           killall kubectl || kubectl port-forward svc/argocd-server 8080:443 -n argocd &
 
-      - name: Print arcd url
-        if: github.event_name == 'workflow_dispatch'
-        run: echo "http://localhost:8080"
+      - name: Setup argcd application
+        run: |
+          kubectl apply -f application.yaml
+
+      - name: Wait for cluster to finish bootstraping
+        run: kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+
+      - name: Print Arcd setup
+        id: argo-setup
+        run: |
+          echo "::set-output name=URL::'http://localhost:8080'"
+          echo "::set-output name=LOGIN::'admin'"
+          echo "::set-output name=PASSWORD::$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"

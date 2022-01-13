@@ -9,15 +9,12 @@ setup:
 	echo "You are about to create demo cluster."
 	echo "Are you sure? (Press Enter to continue or Ctrl+C to abort) "
 	read _
-	./infra/$@.sh
+	.github/self-hosted/$@.sh
 
 argo:
-	./infra/$@.sh
+	.github/self-hosted/$@.sh
 
 clean:
-	echo "You are about to delete demo cluster."
-	echo "Are you sure? (Press Enter to continue or Ctrl+C to abort) "
-	read _
-	bash ./infra/$@.sh
+	.github/self-hosted/$@.sh
 
 -include include.mk

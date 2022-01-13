@@ -2,17 +2,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: myapp-argo-application
+  name: gh-argo-application
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/drdkadtr/gh-action-argocd-app-env.git
     targetRevision: HEAD
-    path: e2e
+    path: apps/json-server
   destination:
     server: https://kubernetes.default.svc
-    namespace: myapp
+    namespace: json-server
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
