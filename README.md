@@ -1,5 +1,7 @@
 # gh-action-argocd-app-env
 
+[![self-hosted](https://github.com/drdkadtr/gh-action-argocd-app-env/actions/workflows/self-hosted.yml/badge.svg?branch=main&event=workflow_dispatch)](https://github.com/drdkadtr/gh-action-argocd-app-env/actions/workflows/self-hosted.yml)
+
 GitOps repo with ArgoCD and GitHub Actions
 
 #### Components used:
