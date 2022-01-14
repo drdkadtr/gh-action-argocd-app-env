@@ -1,0 +1,67 @@
+# https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows
+name: deploy
+on:
+  workflow_dispatch:
+    inputs:
+      use_kind:
+        required: true
+        default: 'true'
+      tag_name:
+        required: true
+        default: '1.0.0-beta'
+      app_repo:
+        required: true
+      image:
+        required: true
+jobs:
+  update-image-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wrap Input
+        run: |
+          echo "APP_REPO=${{ github.event.inputs.app_repo }}" >> $GITHUB_ENV
+          echo "TAG_NAME=${{ github.event.inputs.tag_name }}" >> $GITHUB_ENV
+          echo "IMAGE=${{ github.event.inputs.image }}" >> $GITHUB_ENV
+          echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_repo }}/deployment.yaml" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+      - name: Start KinD
+        if: github.event.inputs.use_kind == 'true'
+        uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: 'v0.11.1'
+          image: 'kindest/node:v1.22.4'
+          wait: 300s
+      - name: Setup argocd
+        if: github.event.inputs.use_kind == 'true'
+        run: |
+          kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+          make argo
+      - uses: azure/setup-kubectl@v1
+        if: github.event.inputs.use_kind == 'false'
+      - name: Patch deployment manifest
+        run: |
+          kubectl patch --filename=${{ env.DEPLOY_FILE_PATH }} \
+            --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP_REPO }}","image":"${{ env.IMAGE }}"}]}}}}' \
+            --local=true -o yaml > tmp.yaml
+      - name: Commit change
+        run: |
+            git config user.name ${{ github.actor }}
+            git config user.email '${{ github.actor }}@users.noreply.github.com'
+            rm -f ${{ env.DEPLOY_FILE_PATH }}
+            mv tmp.yaml ${{ env.DEPLOY_FILE_PATH }}
+            git add ${{ env.DEPLOY_FILE_PATH }}
+            git diff-index --quiet HEAD || git commit -m "Set ${{ env.APP_REPO }} to version ${{ env.TAG_NAME }}"
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Update report
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          signoff: false
+          branch: new_release_${{ env.APP_REPO }}-${{ env.TAG_NAME }}
+          title: 'Set ${{ env.APP_REPO }} to version ${{ env.TAG_NAME }}'
+          body: |
+            This PR was automatically created.
+            Please review and merge to deploy.
