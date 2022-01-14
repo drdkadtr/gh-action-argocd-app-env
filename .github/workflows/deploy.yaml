@@ -11,6 +11,7 @@ on:
         default: '1.0.0-beta'
       app_repo:
         required: true
+        default: 'json-server'
       image:
         required: true
 jobs:
@@ -37,8 +38,6 @@ jobs:
         run: |
           kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
           make argo
-      - uses: azure/setup-kubectl@v1
-        if: github.event.inputs.use_kind == 'false'
       - name: Patch deployment manifest
         run: |
           kubectl patch --filename=${{ env.DEPLOY_FILE_PATH }} \
