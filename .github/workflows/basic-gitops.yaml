@@ -24,7 +24,6 @@ env:
 jobs:
   ci:
     runs-on: ubuntu-latest
-
     steps:
       - name: Wrap Input
         run: |
@@ -33,7 +32,6 @@ jobs:
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "IMAGE=${{ github.event.inputs.image }}" >> $GITHUB_ENV
           echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
-
       - uses: actions/checkout@v2
       - name: "Start k3d"
         uses: AbsaOSS/k3d-action@v2
@@ -42,35 +40,28 @@ jobs:
           args: >-
             --agents 1
             --config=.github/workflows/assets/1.yaml
-
       - name: Wait for cluster to finish bootstraping
         run: |
           kubectl config set-context ${{ env.cluster-name }} --namespace default
           kubectl cluster-info
-
       - name: Install new deployment under test
         run: |
           kubectl create ns ci
-          kubectl ns ci
           kubectl create deployment "${{ env.APP }}" \
             --image "${{ env.IMAGE }}:${{ env.TAG }}" \
-            --port "${{ env.PORT }}" --dry-run=client -o yaml | kubectl apply -f -
-
+            --port "${{ env.PORT }}" --dry-run=client -o yaml | kubectl apply -n ci -f -
       - name: Test all pods are ready
         id: test-result
         run: |
            kubectl wait --for=condition=Ready pods --all -n ci --timeout=${{ env.timeout }}
-
   create-pr:
     runs-on: ubuntu-latest
     if: always()
     needs: ci
-
     steps:
       - name: Mark the job as a failure
         if: needs.ci-kind.result != 'success'
         run: exit 1
-
       - name: Wrap Input
         run: |
           echo "PORT=${{ github.event.inputs.app_port }}" >> $GITHUB_ENV
@@ -78,7 +69,6 @@ jobs:
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "IMAGE=${{ github.event.inputs.image }}" >> $GITHUB_ENV
           echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
-
       - name: Generate deployment manifest
         if: needs.ci.result == 'success'
         run: |
@@ -86,7 +76,6 @@ jobs:
             --filename=${{ env.DEPLOY_FILE_PATH }} \
             --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
             --local=true --dry-run=client -o yaml > tmp.yaml
-
       - name: Commit change
         if: needs.ci.result == 'success'
         run: |
@@ -95,7 +84,6 @@ jobs:
             mv -f tmp.yaml ${{ env.DEPLOY_FILE_PATH }}
             git add ${{ env.DEPLOY_FILE_PATH }}
             git diff-index --quiet HEAD || git commit -m "Set ${{ env.APP }} to version ${{ env.TAG_NAME }}"
-
       - name: Create Pull Request
         if: needs.ci-kind.result == 'success'
         uses: peter-evans/create-pull-request@v3
