@@ -96,7 +96,7 @@ jobs:
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           signoff: false
           branch: new_release_${{ env.APP }}-${{ env.TAG }}
-          title: 'Set ${{ env.APP }} to version ${{ env.IMAGE }:${{ env.TAG }}'
+          title: 'Set ${{ env.APP }} to version ${{ env.IMAGE }}:${{ env.TAG }}'
           body: |
             This PR was automatically created.
             Please review and merge to deploy ${{ env.IMAGE }}.
