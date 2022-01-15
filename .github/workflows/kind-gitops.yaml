@@ -1,0 +1,98 @@
+# This flows creates PR using *strategic merge patch strategy*
+name: kind-gitops
+on:
+  workflow_dispatch:
+    inputs:
+      app_port:
+        required: true
+        default: '8000'
+      app_name:
+        description: 'Existing argo application name'
+        required: true
+      tag:
+        description: 'Image tag to use, eg: 1.4'
+        required: true
+      image:
+        description: 'Image to use, eg: k8s.gcr.io/echoserver'
+        required: true
+jobs:
+  ci-kind:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wrap Input
+        run: |
+          echo "PORT=${{ github.event.inputs.app_port }}" >> $GITHUB_ENV
+          echo "APP=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+          echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          echo "IMAGE=${{ github.event.inputs.image }}" >> $GITHUB_ENV
+          echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v2
+      - name: Start KinD
+        uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: 'v0.11.1'
+          image: 'kindest/node:v1.22.4'
+          wait: 300s
+
+      - name: Install new deployment under test
+        run: |
+           kubectl create deployment "${{ env.APP_NAME }}" \
+            --image "${{ env.IMAGE }}" \
+            --port "${{ env.PORT }}" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Test all pods are ready
+        id: test-result
+        run: |
+           kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=120s
+
+  create-pr:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: ci-kind
+
+    steps:
+      - name: Mark the job as a failure
+        if: needs.ci-kind.result != 'success'
+        run: exit 1
+
+      - name: Wrap Input
+        run: |
+          echo "PORT=${{ github.event.inputs.app_port }}" >> $GITHUB_ENV
+          echo "APP=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+          echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          echo "IMAGE=${{ github.event.inputs.image }}" >> $GITHUB_ENV
+          echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
+
+      - name: Generate deployment manifest
+        if: needs.ci-kind.result == 'success'
+        run: |
+          kubectl patch --type merge \
+            --filename=${{ env.DEPLOY_FILE_PATH }} \
+            --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP_NAME }}","image":"${{ env.IMAGE }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
+            --local=true --dry-run=client -o yaml > tmp.yaml
+
+      - name: Commit change
+        if: needs.ci-kind.result == 'success'
+        run: |
+            git config user.name ${{ github.actor }}
+            git config user.email '${{ github.actor }}@users.noreply.github.com'
+            mv -f tmp.yaml ${{ env.DEPLOY_FILE_PATH }}
+            git add ${{ env.DEPLOY_FILE_PATH }}
+            git diff-index --quiet HEAD || git commit -m "Set ${{ env.APP }} to version ${{ env.TAG_NAME }}"
+
+      - name: Create Pull Request
+        if: needs.ci-kind.result == 'success'
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Update report
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          signoff: false
+          branch: new_release_${{ env.APP }}-${{ env.TAG_NAME }}
+          title: 'Set ${{ env.APP }} to version ${{ env.TAG_NAME }}'
+          body: |
+            This PR was automatically created.
+            Please review and merge to deploy ${{ env.IMAGE }}.

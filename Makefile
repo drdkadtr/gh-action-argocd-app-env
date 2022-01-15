@@ -1,9 +1,10 @@
+# Self-hosting with minikube
+
 MAKEFLAGS += --silent
 
-.PHONY: all setup argo clean
+.PHONY: all clean setup install-argocd
 
-all: clean setup argo
-	true
+all: clean setup install-argocd
 
 setup:
 	echo "You are about to create demo cluster."
@@ -11,8 +12,11 @@ setup:
 	read _
 	.github/self-hosted/$@.sh
 
-argo:
+install-argocd:
 	.github/self-hosted/$@.sh
+	echo "::set-output name=URL::'http://localhost:8080'"
+	echo "::set-output name=LOGIN::'admin'"
+	echo "::set-output name=PASSWORD::$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
 
 clean:
 	.github/self-hosted/$@.sh
