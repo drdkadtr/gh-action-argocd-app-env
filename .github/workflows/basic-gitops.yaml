@@ -1,19 +1,22 @@
-# This flows creates PR using *strategic merge patch strategy*
-name: kind-gitops
+# This flows creates PR using *strategic merge patch strategy* for public images
+name: basic-gitops
 on:
   workflow_dispatch:
     inputs:
-      app_port:
-        required: true
-        default: '8000'
       app_name:
         description: 'Existing argo application name'
         required: true
+      app_port:
+        description: 'Port number, eg: 80'
+        required: true
+        default: '80'
       tag:
         description: 'Image tag to use, eg: 1.4'
+        default: 'latest'
         required: true
       image:
-        description: 'Image to use, eg: k8s.gcr.io/echoserver'
+        description: 'Image to use, eg: docker.io/hashicorp/http-echo'
+        default: 'docker.io/hashicorp/http-echo'
         required: true
 jobs:
   ci-kind:
@@ -39,7 +42,7 @@ jobs:
       - name: Install new deployment under test
         run: |
            kubectl create deployment "${{ env.APP }}" \
-            --image "${{ env.IMAGE }}" \
+            --image "${{ env.IMAGE }}:${{ env.TAG }}" \
             --port "${{ env.PORT }}" --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Test all pods are ready
