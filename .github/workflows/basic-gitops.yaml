@@ -60,7 +60,7 @@ jobs:
     needs: ci
     steps:
       - name: Mark the job as a failure
-        if: needs.ci-kind.result != 'success'
+        if: needs.ci.result != 'success'
         run: exit 1
       - name: Wrap Input
         run: |
@@ -85,7 +85,7 @@ jobs:
             git add ${{ env.DEPLOY_FILE_PATH }}
             git diff-index --quiet HEAD || git commit -m "Set ${{ env.APP }} to version ${{ env.TAG_NAME }}"
       - name: Create Pull Request
-        if: needs.ci-kind.result == 'success'
+        if: needs.ci.result == 'success'
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
