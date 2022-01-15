@@ -1,5 +1,6 @@
-# This flows creates PR using *strategic merge patch strategy* for public images
-name: basic-gitops
+# This GH flow creates new PR with deployment patch using *strategic merge patch strategy*.
+# Uses throw-away k3d.io to perform deployment validation.
+name: json-server
 on:
   workflow_dispatch:
     inputs:
@@ -94,8 +95,8 @@ jobs:
           committer: GitHub <noreply@github.com>
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           signoff: false
-          branch: new_release_${{ env.APP }}-${{ env.TAG_NAME }}
-          title: 'Set ${{ env.APP }} to version ${{ env.TAG_NAME }}'
+          branch: new_release_${{ env.APP }}-${{ env.TAG }}
+          title: 'Set ${{ env.APP }} to version ${{ env.TAG }}'
           body: |
             This PR was automatically created.
             Please review and merge to deploy ${{ env.IMAGE }}.
