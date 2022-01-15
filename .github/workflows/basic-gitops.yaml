@@ -18,8 +18,10 @@ on:
         description: 'Image to use, eg: docker.io/hashicorp/http-echo'
         default: 'docker.io/hashicorp/http-echo'
         required: true
+env:
+  cluster-name: "ci-cluster"
 jobs:
-  ci-kind:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,12 +34,18 @@ jobs:
           echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
 
       - uses: actions/checkout@v2
-      - name: Start KinD
-        uses: engineerd/setup-kind@v0.5.0
+      - name: "Start k3d"
+        uses: AbsaOSS/k3d-action@v2
         with:
-          version: 'v0.11.1'
-          image: 'kindest/node:v1.22.4'
-          wait: 300s
+          cluster-name: ${{ env.cluster-name }}
+          args: >-
+            --agents 1
+            --config=.github/workflows/assets/1.yaml
+
+      - name: Wait for cluster to finish bootstraping
+        run: |
+          kubectl config set-context ${{ env.cluster-name }} --namespace default
+          kubectl cluster-info
 
       - name: Install new deployment under test
         run: |
@@ -53,7 +61,7 @@ jobs:
   create-pr:
     runs-on: ubuntu-latest
     if: always()
-    needs: ci-kind
+    needs: ci
 
     steps:
       - name: Mark the job as a failure
@@ -69,7 +77,7 @@ jobs:
           echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
 
       - name: Generate deployment manifest
-        if: needs.ci-kind.result == 'success'
+        if: needs.ci.result == 'success'
         run: |
           kubectl patch --type merge \
             --filename=${{ env.DEPLOY_FILE_PATH }} \
@@ -77,7 +85,7 @@ jobs:
             --local=true --dry-run=client -o yaml > tmp.yaml
 
       - name: Commit change
-        if: needs.ci-kind.result == 'success'
+        if: needs.ci.result == 'success'
         run: |
             git config user.name ${{ github.actor }}
             git config user.email '${{ github.actor }}@users.noreply.github.com'
