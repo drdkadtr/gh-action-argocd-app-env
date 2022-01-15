@@ -15,11 +15,12 @@ on:
         default: 'latest'
         required: true
       image:
-        description: 'Image to use, eg: docker.io/hashicorp/http-echo'
-        default: 'docker.io/hashicorp/http-echo'
+        description: 'Image to use, eg: docker.io/nginx'
+        default: 'docker.io/nginx'
         required: true
 env:
   cluster-name: "ci-cluster"
+  timeout: "120s"
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -49,14 +50,16 @@ jobs:
 
       - name: Install new deployment under test
         run: |
-           kubectl create deployment "${{ env.APP }}" \
+          kubectl create ns ci
+          kubectl ns ci
+          kubectl create deployment "${{ env.APP }}" \
             --image "${{ env.IMAGE }}:${{ env.TAG }}" \
             --port "${{ env.PORT }}" --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Test all pods are ready
         id: test-result
         run: |
-           kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=120s
+           kubectl wait --for=condition=Ready pods --all -n ci --timeout=${{ env.timeout }}
 
   create-pr:
     runs-on: ubuntu-latest
