@@ -1,24 +1,25 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: null
   labels:
-    app: gitops-app
-  name: gitops-app
+    app: json-server
+  name: json-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gitops-app
+      app: json-server
   strategy: {}
   template:
     metadata:
+      creationTimestamp: null
       labels:
-        app: gitops-app
+        app: json-server
     spec:
       containers:
-        - image: adtrdr/json-server-app:latest
-          imagePullPolicy: Always
-          name: json-server-app
-          ports:
-            - containerPort: 8080
+      - image: docker.io/clue/json-server:latest
+        name: json-server
+        ports:
+        - containerPort: 80
+        resources: {}
