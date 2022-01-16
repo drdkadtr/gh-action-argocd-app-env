@@ -76,12 +76,12 @@ jobs:
           echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Generate deployment manifest
-        run: >
+        run: |
           if [[ ! -f "${{ env.DEPLOY_FILE_PATH }}" ]]; then
                
                mkdir -p "${{ env.DEPLOY_FILE_DIR }}" "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
                
-               .github/gen-argo-applications.sh "{{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml" \
+               .github/gen-argo-applications.sh "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml" \
                 "${{ env.APP }}-application" \
                 "https://github.com/${{ env.GITHUB_REPOSITORY }}.git" \
                 "${{ env.ARGO_APPLICATIONS_FILE_DIR }}" \
@@ -89,7 +89,7 @@ jobs:
 
                git add "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml"
 
-               kubectl create deployment "${{ env.TAG }}" \
+               kubectl create deployment "${{ env.APP }}" \
                 --image "${{ env.IMAGE }}:${{ env.TAG }}" \
                 --port "${{ env.PORT }}" --dry-run=client -o yaml|grep -v status > tmp.yaml
               
@@ -98,7 +98,7 @@ jobs:
             # strategic patch merge:
             kubectl patch --type merge \
               --filename=${{ env.DEPLOY_FILE_PATH }} \
-              --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
+              --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}:${{ env.TAG }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
               --local=true --dry-run=client -o yaml > tmp.yaml
               
               echo "::set-output create-new=false"
