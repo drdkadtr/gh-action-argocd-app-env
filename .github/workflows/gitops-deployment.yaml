@@ -1,6 +1,6 @@
 # This GH flow creates new PR with deployment patch using *strategic merge patch strategy*.
 # Uses throw-away k3d.io to perform deployment validation.
-name: json-server
+name: gitops-deployment
 on:
   workflow_dispatch:
     inputs:
@@ -22,15 +22,15 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    env:
-      cluster-name: "ci-cluster"
-      timeout: "120s"
-      ns: 'ci'
     outputs: # declare what this job outputs (so it can be re-used for other jobs)
       PORT: ${{ github.event.inputs.app_port }}
       APP: ${{ github.event.inputs.app_name }}
       TAG: ${{ github.event.inputs.tag }}
       IMAGE: ${{ github.event.inputs.image }}
+    env:
+      cluster-name: "ci-cluster"
+      timeout: "120s"
+      ns: 'ci'
     steps:
       - name: Wrap Input
         id: extract_vars
@@ -73,14 +73,20 @@ jobs:
     steps:
       - name: Wrap Input
         run: |
-          echo "DEPLOY_FILE_PATH=apps/${{ needs.ci.outputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
+          echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
       - uses: actions/checkout@v2
-      - name: Generate deployment manifest (strategic patch merge)
+      - name: Generate deployment manifest
         run: |
-          kubectl patch --type merge \
-            --filename=${{ env.DEPLOY_FILE_PATH }} \
-            --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
-            --local=true --dry-run=client -o yaml > tmp.yaml
+          if [[ ! -f "${{ env.DEPLOY_FILE_PATH }}" ]]; then
+               kubectl create deployment "${{ env.TAG }}" \
+                --image "${{ env.IMAGE }}:${{ env.TAG }}" \
+                --port "${{ env.PORT }}" --dry-run=client -o yaml > tmp.yaml
+          else # strategic patch merge:
+            kubectl patch --type merge \
+              --filename=${{ env.DEPLOY_FILE_PATH }} \
+              --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
+              --local=true --dry-run=client -o yaml > tmp.yaml
+          fi
       - name: Commit change
         run: |
             git config user.name ${{ github.actor }}
