@@ -76,30 +76,30 @@ jobs:
           echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Generate deployment manifest
-        run: |
+        run: >
           if [[ ! -f "${{ env.DEPLOY_FILE_PATH }}" ]]; then
                mkdir -p "${{ env.DEPLOY_FILE_DIR }}" "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
                tee "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml"<<EOF
-                apiVersion: argoproj.io/v1alpha1
-                kind: Application
-                metadata:
-                  name: "${{ env.APP }}-application"
-                  namespace: argocd
-                spec:
-                  project: default
-                  source:
-                    repoURL: "https://github.com/${{ env.GITHUB_REPOSITORY }}.git"
-                    targetRevision: HEAD
-                    path: "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
-                  destination:
-                    server: https://kubernetes.default.svc
-                    namespace: "${{ env.APP }}"
-                  syncPolicy:
-                    syncOptions:
-                      - CreateNamespace=true
-                    automated:
-                      selfHeal: true
-                      prune: true
+               apiVersion: argoproj.io/v1alpha1
+               kind: Application
+               metadata:
+                 name: "${{ env.APP }}-application"
+                 namespace: argocd
+               spec:
+                 project: default
+                 source:
+                   repoURL: "https://github.com/${{ env.GITHUB_REPOSITORY }}.git"
+                   targetRevision: HEAD
+                   path: "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
+                 destination:
+                   server: https://kubernetes.default.svc
+                   namespace: "${{ env.APP }}"
+                 syncPolicy:
+                   syncOptions:
+                     - CreateNamespace=true
+                   automated:
+                     selfHeal: true
+                    prune: true
                EOF
                git add "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml"
 
