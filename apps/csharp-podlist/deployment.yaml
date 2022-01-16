@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: csharp-podlist
+  name: csharp-podlist
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csharp-podlist
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: csharp-podlist
+    spec:
+      containers:
+      - image: docker.io/adtrdr/csharp-podlist:latest
+        name: csharp-podlist
+        ports:
+        - containerPort: 80
+        resources: {}
