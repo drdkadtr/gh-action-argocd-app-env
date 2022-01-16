@@ -70,10 +70,12 @@ jobs:
       APP: ${{ needs.ci.outputs.app_name }}
       TAG: ${{ needs.ci.outputs.tag }}
       IMAGE: ${{ needs.ci.outputs.image }}
-      DEPLOY_FILE_PATH: apps/${{ needs.ci.outputs.app_name }}/deployment.yaml
     steps:
+      - name: Wrap Input
+        run: |
+          echo "DEPLOY_FILE_PATH=apps/${{ needs.ci.outputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
       - uses: actions/checkout@v2
-      - name: Generate deployment manifest (strategic merge)
+      - name: Generate deployment manifest (strategic patch merge)
         run: |
           kubectl patch --type merge \
             --filename=${{ env.DEPLOY_FILE_PATH }} \
@@ -85,7 +87,7 @@ jobs:
             git config user.email '${{ github.actor }}@users.noreply.github.com'
             mv -f tmp.yaml ${{ env.DEPLOY_FILE_PATH }}
             git add ${{ env.DEPLOY_FILE_PATH }}
-            git diff-index --quiet HEAD || git commit -m "Set ${{ env.APP }} to version ${{ env.TAG_NAME }}"
+            git diff-index --quiet HEAD || git commit -m "Set: ${{ env.APP }} to version: ${{ env.TAG }}"
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
@@ -95,7 +97,7 @@ jobs:
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           signoff: false
           branch: new_release_${{ env.APP }}-${{ env.TAG }}
-          title: 'Set ${{ env.APP }} to version ${{ env.IMAGE }}:${{ env.TAG }}'
+          title: 'Set: ${{ env.APP }} to version: ${{ env.IMAGE }}:${{ env.TAG }}'
           body: |
             This PR was automatically created.
             Please review and merge to deploy ${{ env.IMAGE }}.
