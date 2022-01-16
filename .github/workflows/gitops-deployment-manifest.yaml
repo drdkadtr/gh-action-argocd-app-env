@@ -73,35 +73,37 @@ jobs:
         run: |
           echo "ARGO_APPLICATIONS_FILE_DIR=applications/${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
           echo "DEPLOY_FILE_DIR=apps/${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
-          echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Generate deployment manifest
         run: |
           if [[ ! -f "${{ env.DEPLOY_FILE_PATH }}" ]]; then
-               
+
                mkdir -p "${{ env.DEPLOY_FILE_DIR }}" "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
-               
                .github/gen-argo-applications.sh "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml" \
                 "${{ env.APP }}-application" \
                 "https://github.com/${{ env.GITHUB_REPOSITORY }}.git" \
                 "${{ env.ARGO_APPLICATIONS_FILE_DIR }}" \
                 "${{ env.APP }}"
-
                git add "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml"
 
                kubectl create deployment "${{ env.APP }}" \
                 --image "${{ env.IMAGE }}:${{ env.TAG }}" \
-                --port "${{ env.PORT }}" --dry-run=client -o yaml|grep -v status > tmp.yaml
-              
-              echo "::set-output create-new=true"
+                --port "${{ env.PORT }}" --dry-run=client -o yaml|grep -v status > "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+               git add "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+
+               kubectl create service clusterip "${{ env.APP }}-svc" --tcp="${{ env.PORT }}":"${{ env.PORT }}" --dry-run=client -o yaml > "${{ env.DEPLOY_FILE_DIR }}/service.yaml"
+               git add "${{ env.DEPLOY_FILE_DIR }}/service.yaml"
+
+               echo "::set-output create-new=true"
           else
             # strategic patch merge:
             kubectl patch --type merge \
               --filename=${{ env.DEPLOY_FILE_PATH }} \
               --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}:${{ env.TAG }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
-              --local=true --dry-run=client -o yaml > tmp.yaml
-              
-              echo "::set-output create-new=false"
+              --local=true --dry-run=client -o yaml "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+
+            git add "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+            echo "::set-output create-new=false"
           fi
       - name: Commit change
         run: |
