@@ -79,11 +79,13 @@ jobs:
     steps:
       - name: Wrap Input
         run: |
+          echo "DEPLOY_FILE_DIR=apps/${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
           echo "DEPLOY_FILE_PATH=apps/${{ github.event.inputs.app_name }}/deployment.yaml" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Generate deployment manifest
         run: |
           if [[ ! -f "${{ env.DEPLOY_FILE_PATH }}" ]]; then
+               mkdir -p "${{ env.DEPLOY_FILE_DIR }}"
                kubectl create deployment "${{ env.TAG }}" \
                 --image "${{ env.IMAGE }}:${{ env.TAG }}" \
                 --port "${{ env.PORT }}" --dry-run=client -o yaml > tmp.yaml
