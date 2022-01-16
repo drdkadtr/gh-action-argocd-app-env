@@ -79,7 +79,7 @@ jobs:
         run: |
           if [[ ! -f "${{ env.DEPLOY_FILE_PATH }}" ]]; then
                mkdir -p "${{ env.DEPLOY_FILE_DIR }}" "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
-               cat << EOF > "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml"
+               tee "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml"<<EOF
                 apiVersion: argoproj.io/v1alpha1
                 kind: Application
                 metadata:
