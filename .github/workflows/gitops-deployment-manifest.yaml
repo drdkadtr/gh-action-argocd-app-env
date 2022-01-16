@@ -101,16 +101,14 @@ jobs:
               --filename=${{ env.DEPLOY_FILE_PATH }} \
               --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}:${{ env.TAG }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
               --local=true --dry-run=client -o yaml "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
-
             git add "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
+            
             echo "::set-output create-new=false"
           fi
       - name: Commit change
         run: |
             git config user.name ${{ github.actor }}
             git config user.email '${{ github.actor }}@users.noreply.github.com'
-            mv -f tmp.yaml ${{ env.DEPLOY_FILE_PATH }}
-            git add ${{ env.DEPLOY_FILE_PATH }}
             git diff-index --quiet HEAD || git commit -m "Set: ${{ env.APP }} to version: ${{ env.TAG }}"
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
