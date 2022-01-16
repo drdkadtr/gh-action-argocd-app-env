@@ -19,12 +19,13 @@ on:
         description: 'Image to use, eg: docker.io/nginx'
         default: 'docker.io/nginx'
         required: true
-env:
-  cluster-name: "ci-cluster"
-  timeout: "120s"
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      cluster-name: "ci-cluster"
+      timeout: "120s"
+      ns: 'ci'
     outputs: # declare what this job outputs (so it can be re-used for other jobs)
       PORT: ${{ github.event.inputs.app_port }}
       APP: ${{ github.event.inputs.app_name }}
@@ -51,8 +52,6 @@ jobs:
           kubectl config set-context ${{ env.cluster-name }} --namespace default
           kubectl cluster-info
       - name: Install new deployment under test
-        with:
-          ns: 'ci'
         run: |
           kubectl create ns ${{ env.ns }}
           kubectl create deployment "${{ env.APP }}" \
@@ -60,8 +59,6 @@ jobs:
             --port "${{ env.PORT }}" --dry-run=client -o yaml | kubectl apply -n ${{ env.ns }} -f -
       - name: Test all pods are ready
         id: test-result
-        with:
-          ns: 'ci'
         run: |
            kubectl wait --for=condition=Ready pods --all -n ${{ env.ns }} --timeout=${{ env.timeout }}
   create-pr:
