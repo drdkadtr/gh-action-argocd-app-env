@@ -81,7 +81,7 @@ jobs:
                
                mkdir -p "${{ env.DEPLOY_FILE_DIR }}" "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
                
-               ./githhub/gen-argo-applications.sh "{{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml" \
+               .github/gen-argo-applications.sh "{{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml" \
                 "${{ env.APP }}-application" \
                 "https://github.com/${{ env.GITHUB_REPOSITORY }}.git" \
                 "${{ env.ARGO_APPLICATIONS_FILE_DIR }}" \
