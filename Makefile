@@ -14,9 +14,10 @@ setup:
 
 install-argocd:
 	.github/self-hosted/$@.sh
-	echo "::set-output name=URL::'http://localhost:8080'"
-	echo "::set-output name=LOGIN::'admin'"
-	echo "::set-output name=PASSWORD::$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
+	echo ""
+	echo "::URL       'http://localhost:8080'"
+	echo "::LOGIN     'admin'"
+	echo "::PASSWORD  $(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
 
 clean:
 	.github/self-hosted/$@.sh
