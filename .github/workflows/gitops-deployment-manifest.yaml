@@ -1,5 +1,5 @@
 # This GH flow creates new PR with deployment patch using *strategic merge patch strategy*.
-# Uses k3d.io to generate deployment manifest.
+# Uses k3d.io for CI deployment env.
 name: gitops-deployment-manifest
 on:
   workflow_dispatch:
@@ -77,7 +77,6 @@ jobs:
       - name: Generate deployment manifest
         run: |
           if [[ ! -f "${{ env.DEPLOY_FILE_PATH }}" ]]; then
-
                mkdir -p "${{ env.DEPLOY_FILE_DIR }}" "${{ env.ARGO_APPLICATIONS_FILE_DIR }}"
                .github/gen-argo-applications.sh "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml" \
                 "${{ env.APP }}-application" \
@@ -85,15 +84,12 @@ jobs:
                 "${{ env.ARGO_APPLICATIONS_FILE_DIR }}" \
                 "${{ env.APP }}"
                git add "${{ env.ARGO_APPLICATIONS_FILE_DIR }}/application.yaml"
-
                kubectl create deployment "${{ env.APP }}" \
                 --image "${{ env.IMAGE }}:${{ env.TAG }}" \
                 --port "${{ env.PORT }}" --dry-run=client -o yaml|grep -v status > "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
                git add "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
-
                kubectl create service clusterip "${{ env.APP }}-svc" --tcp="${{ env.PORT }}":"${{ env.PORT }}" --dry-run=client -o yaml > "${{ env.DEPLOY_FILE_DIR }}/service.yaml"
                git add "${{ env.DEPLOY_FILE_DIR }}/service.yaml"
-
                echo "::set-output create-new=true"
           else
             # strategic patch merge:
@@ -102,7 +98,6 @@ jobs:
               --patch='{"spec":{"template":{"spec":{"containers":[{"name":"${{ env.APP }}","image":"${{ env.IMAGE }}:${{ env.TAG }}","ports":[{"containerPort":"${{ env.PORT }}"}]}]}}}}' \
               --local=true --dry-run=client -o yaml "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
             git add "${{ env.DEPLOY_FILE_DIR }}/deployment.yaml"
-            
             echo "::set-output create-new=false"
           fi
       - name: Commit change

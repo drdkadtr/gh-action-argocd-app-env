@@ -19,7 +19,7 @@ jobs:
 
       - name: Setup argocd and patch it
         run: |
-          .github/self-hosted/argo.sh
+          .github/self-hosted/install-argo.sh
 
       - name: Port forward argcd UI
         run: |

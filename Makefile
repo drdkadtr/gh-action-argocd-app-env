@@ -5,6 +5,11 @@ MAKEFLAGS += --silent
 .PHONY: all clean setup install-argocd
 
 all: clean setup install-argocd
+	echo ""
+	killall kubectl || kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+	echo "::URL       'http://localhost:8080'"
+	echo "::LOGIN     'admin'"
+	echo "::PASSWORD  $(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
 
 setup:
 	echo "You are about to create demo cluster."
@@ -14,10 +19,6 @@ setup:
 
 install-argocd:
 	.github/self-hosted/$@.sh
-	echo ""
-	echo "::URL       'http://localhost:8080'"
-	echo "::LOGIN     'admin'"
-	echo "::PASSWORD  $(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
 
 clean:
 	.github/self-hosted/$@.sh
